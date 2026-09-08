@@ -154,19 +154,13 @@ jobs:
       - name: Stage artifacts
         run: |
           set -euxo pipefail
-          mkdir -p "artifacts/${{ matrix.group }}/${{ matrix.attr }}"
-          # result may be a linkFarm (directory of format outputs) or a single
-          # store path — handle both.
-          if [ -d result ] && [ -z "$(find result -maxdepth 1 -type f)" ]; then
-            for d in result/*; do
-              [ -e "$d" ] || continue
-              cp -L -r --no-preserve=mode,ownership "$d"/. "artifacts/${{ matrix.group }}/${{ matrix.attr }}/" 2>/dev/null || true
-            done
-          else
-            cp -L -r --no-preserve=mode,ownership result/. "artifacts/${{ matrix.group }}/${{ matrix.attr }}/" 2>/dev/null || true
-          fi
-          chmod -R u+w "artifacts/${{ matrix.group }}"
-          ls -lR "artifacts/${{ matrix.group }}"
+          out="artifacts/${{ matrix.group }}/${{ matrix.attr }}"
+          mkdir -p "$out"
+          # Dereference every symlink under result/ (bundle output = store dir
+          # of files; bundleAll output = linkFarm of per-format symlinks).
+          cp -L -r --no-preserve=mode,ownership result/. "$out/"
+          chmod -R u+w "$out"
+          ls -lR "$out"
 
       - name: Upload
         uses: actions/upload-artifact@v7
