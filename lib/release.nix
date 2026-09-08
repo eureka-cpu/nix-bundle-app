@@ -623,8 +623,7 @@ let
         mkdir -p "$(dirname "$out/${b.outFile}")"
         cp -L "${b.drv}/${b.outFile}" "$out/${b.outFile}"
         chmod u+w "$out/${b.outFile}"
-        ${lib.optionalString
-          (b.format == "archlinux" && (b.drv.passthru.archlinuxMode or "pkg") == "both")
+        ${lib.optionalString (b.format == "archlinux" && (b.drv.passthru.archlinuxMode or "pkg") == "both")
           ''
             # The `archlinux` format with `output = "both"` writes a
             # PKGBUILD + .SRCINFO + source tarball into `$out/aur/`
@@ -637,7 +636,8 @@ let
               ${pkgs.coreutils}/bin/cp -RL "${b.drv}/aur/." "$out/aur/"
               ${pkgs.coreutils}/bin/chmod -R u+w "$out/aur"
             fi
-          ''}
+          ''
+        }
       '') sorted;
     in
     pkgs.runCommand "${scriptName}-${scriptVersion}-release"
