@@ -25,8 +25,12 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Cache /nix/store
-        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-bundle-app
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: nix-community
 
       - name: nixfmt --check
         run: |
@@ -94,8 +98,12 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Cache /nix/store
-        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-bundle-app
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: nix-community
 
       - name: Build check ${{ matrix.check }}
         run: nix build ".#checks.${{ matrix.system }}.${{ matrix.check }}" -L --keep-going --no-link
@@ -145,8 +153,12 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Cache /nix/store
-        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-bundle-app
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: nix-community
 
       - name: Build ${{ matrix.attr }}
         run: nix build ".#${{ matrix.attr }}" -L --keep-going -o result
