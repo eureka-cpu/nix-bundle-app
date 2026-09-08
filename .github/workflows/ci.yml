@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -85,7 +85,7 @@ jobs:
           - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-msi }
           - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-windows-zip }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -136,7 +136,7 @@ jobs:
           - { group: darwin-native,  attr: hello-pkg,           runs-on: macos-latest }
           - { group: darwin-native,  attr: hello-productbuild,  runs-on: macos-latest }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -169,7 +169,7 @@ jobs:
           ls -lR "artifacts/${{ matrix.group }}"
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bundle-${{ matrix.group }}-${{ matrix.attr }}
           path: artifacts/${{ matrix.group }}/${{ matrix.attr }}/**
