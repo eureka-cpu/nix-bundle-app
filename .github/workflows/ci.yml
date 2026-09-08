@@ -37,8 +37,68 @@ jobs:
       - name: deadnix
         run: nix run nixpkgs#deadnix -- --fail .
 
-      - name: nix flake check
-        run: nix flake check -L --keep-going
+      - name: nix flake check (evaluation gate)
+        run: nix flake check --no-build -L
+
+  tests:
+    name: check · ${{ matrix.system }} · ${{ matrix.check }}
+    needs: check
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # linux checks (x86_64-linux)
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-rpm }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-archlinux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-appimage }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-tar-gz }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-zip }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-app }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-brew }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-brew-linux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-pkg }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-productbuild }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-nsis }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-msi }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-service-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-service-nsis }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-service-pkg }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-extra-files-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-extra-files-rpm }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-extra-files-archlinux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-rpm }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-archlinux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-appimage }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-flatpak }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-snap }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-tar-gz }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-zip }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-app }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-brew }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-pkg }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-productbuild }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-nsis }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-msi }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-windows-zip }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Cache /nix/store
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build check ${{ matrix.check }}
+        run: nix build ".#checks.${{ matrix.system }}.${{ matrix.check }}" -L --keep-going --no-link
 
   bundle:
     name: ${{ matrix.group }} · ${{ matrix.attr }}
