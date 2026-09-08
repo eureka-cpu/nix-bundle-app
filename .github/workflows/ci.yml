@@ -158,7 +158,9 @@ jobs:
           mkdir -p "$out"
           # Dereference every symlink under result/ (bundle output = store dir
           # of files; bundleAll output = linkFarm of per-format symlinks).
-          cp -L -r --no-preserve=mode,ownership result/. "$out/"
+          # BSD cp (macOS) lacks GNU long options — use short flags only and
+          # fix up read-only /nix/store perms with chmod afterwards.
+          cp -RL result/. "$out/"
           chmod -R u+w "$out"
           ls -lR "$out"
 
