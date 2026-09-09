@@ -25,13 +25,6 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v15
-        with:
-          name: nix-bundle-app
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
-
       - name: nixfmt --check
         run: |
           mapfile -t files < <(git ls-files '*.nix')
@@ -98,13 +91,6 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v15
-        with:
-          name: nix-bundle-app
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
-
       - name: Build check ${{ matrix.check }}
         run: nix build ".#checks.${{ matrix.system }}.${{ matrix.check }}" -L --keep-going --no-link
 
@@ -152,13 +138,6 @@ jobs:
           extra-conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true
-
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v15
-        with:
-          name: nix-bundle-app
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
 
       - name: Build ${{ matrix.attr }}
         run: nix build ".#${{ matrix.attr }}" -L --keep-going -o result
