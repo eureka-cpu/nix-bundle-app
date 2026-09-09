@@ -38,28 +38,30 @@ let
   };
   outFile = "${meta.name}-${meta.version}-${target.arch}.AppImage";
 
-  # Pinned to a numbered type2-runtime release, not `continuous` — that tag
-  # is rebuilt in place upstream, which would make the sha256 below go stale.
-  # Bump + refresh the hashes to update, or override per-bundle via
-  # `info.appImageRuntime`.
-  runtimeRelease = "20251108";
-
+  # Runtime is a ~200KB ELF that mounts the appended squashfs and execs AppRun.
+  # AppImage/type2-runtime publishes to a rolling `continuous` release tag, so
+  # the artifact rotates whenever upstream rebuilds. When CI trips a hash
+  # mismatch, refresh via:
+  #   nix-prefetch-url --type sha256 \
+  #     https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-<arch>
+  #   nix hash convert --hash-algo sha256 --to sri <base32>
+  # Downstreams can bypass the pin entirely with
+  # `info.appImageRuntime = pkgs.fetchurl { url=...; hash=...; }`.
   defaultRuntime =
     let
-      url = "https://github.com/AppImage/type2-runtime/releases/download/${runtimeRelease}/runtime-${target.arch}";
-      sha =
+      url = "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${target.arch}";
+      hash =
         {
-          "x86_64" = "0396xi3km1yd0z4329lbjxmv82ddc40gd0x8hca0ylcj7i28pjig";
-          "aarch64" = "0i3lv1j8d9yqssh2i97idmdg9xx11jgdairkdpzw1ikwj77xzjq0";
+          "x86_64" = "sha256-HMSbzx4szVk8N5rbF8n4WjbWGQiCllBN6VsdBiFa678=";
+          "aarch64" = "sha256-fV13K3wy8MhMrwpFKjBypXCQJ9fqxYVv64mnp6iIE3I=";
         }
         .${target.arch} or null;
     in
-    if sha == null then
+    if hash == null then
       throw "nix-bundle-app: no pinned AppImage runtime hash for arch '${target.arch}'. Supply meta.appImageRuntime."
     else
-      fetchurl {
-        inherit url;
-        sha256 = sha;
+      pkgs.fetchurl {
+        inherit url hash;
       };
 
   runtime = if meta.appImageRuntime != null then meta.appImageRuntime else defaultRuntime;

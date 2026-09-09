@@ -25,17 +25,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: nixbuild/nix-quick-install-action@v30
         with:
-          extra-conf: |
+          nix_conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true
-
-      - name: Cache /nix/store
-        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: nixfmt --check
         if: matrix.os == 'ubuntu-latest'
@@ -48,8 +45,65 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: nix run nixpkgs#deadnix -- --fail .
 
-      - name: Build tests (every format against pkgs.hello + a Rust binary)
-        run: nix-build tests -L --keep-going
+      - name: nix flake check (evaluation gate)
+        run: nix flake check --no-build -L
+
+  tests:
+    name: check · ${{ matrix.system }} · ${{ matrix.check }}
+    needs: check
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # linux checks (x86_64-linux)
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-rpm }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-archlinux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-appimage }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-tar-gz }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-zip }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-app }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-brew }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-brew-linux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-pkg }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-productbuild }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-nsis }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-msi }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-service-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-service-nsis }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-service-pkg }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-extra-files-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-extra-files-rpm }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: bundle-extra-files-archlinux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-deb }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-rpm }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-archlinux }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-appimage }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-flatpak }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-snap }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-tar-gz }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-zip }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-app }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-brew }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-pkg }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-productbuild }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-nsis }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-msi }
+          - { runs-on: ubuntu-latest, system: x86_64-linux, check: rust-windows-zip }
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: nixbuild/nix-quick-install-action@v30
+        with:
+          nix_conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Build check ${{ matrix.check }}
+        run: nix build ".#checks.${{ matrix.system }}.${{ matrix.check }}" -L --keep-going --no-link
 
   bundle:
     name: ${{ matrix.group }} · ${{ matrix.attr }}
@@ -87,17 +141,14 @@ jobs:
           - { group: darwin-native,  attr: hello-pkg,           runs-on: macos-latest }
           - { group: darwin-native,  attr: hello-productbuild,  runs-on: macos-latest }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: nixbuild/nix-quick-install-action@v30
         with:
-          extra-conf: |
+          nix_conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true
-
-      - name: Cache /nix/store
-        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Build ${{ matrix.attr }}
         run: nix build ".#${{ matrix.attr }}" -L --keep-going -o result
@@ -105,22 +156,18 @@ jobs:
       - name: Stage artifacts
         run: |
           set -euxo pipefail
-          mkdir -p "artifacts/${{ matrix.group }}/${{ matrix.attr }}"
-          # result may be a linkFarm (directory of format outputs) or a single
-          # store path — handle both.
-          if [ -d result ] && [ -z "$(find result -maxdepth 1 -type f)" ]; then
-            for d in result/*; do
-              [ -e "$d" ] || continue
-              cp -L -r --no-preserve=mode,ownership "$d"/. "artifacts/${{ matrix.group }}/${{ matrix.attr }}/" 2>/dev/null || true
-            done
-          else
-            cp -L -r --no-preserve=mode,ownership result/. "artifacts/${{ matrix.group }}/${{ matrix.attr }}/" 2>/dev/null || true
-          fi
-          chmod -R u+w "artifacts/${{ matrix.group }}"
-          ls -lR "artifacts/${{ matrix.group }}"
+          out="artifacts/${{ matrix.group }}/${{ matrix.attr }}"
+          mkdir -p "$out"
+          # Dereference every symlink under result/ (bundle output = store dir
+          # of files; bundleAll output = linkFarm of per-format symlinks).
+          # BSD cp (macOS) lacks GNU long options — use short flags only and
+          # fix up read-only /nix/store perms with chmod afterwards.
+          cp -RL result/. "$out/"
+          chmod -R u+w "$out"
+          ls -lR "$out"
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bundle-${{ matrix.group }}-${{ matrix.attr }}
           path: artifacts/${{ matrix.group }}/${{ matrix.attr }}/**
