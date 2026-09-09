@@ -36,9 +36,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: nixbuild/nix-quick-install-action@v30
         with:
-          extra-conf: |
+          nix_conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true
 
